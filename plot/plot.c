@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <time.h>
+#include <math.h>
 
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 700
@@ -35,7 +36,7 @@ int main(void)
 	for(i = 0; i < 256; i++)
 	{
 		X[i] = (float)rand()/(float)RAND_MAX * 10 - 5;		
-		Y[i] = X[i] + (float)rand()/(float)RAND_MAX * 5 - 2.5;
+		Y[i] = sin(X[i]) + (float)rand()/(float)RAND_MAX * 1 - 0.5;
 	}
 
 	SDL_Init(SDL_INIT_VIDEO);
@@ -49,9 +50,12 @@ int main(void)
 		fprintf(stderr, "Arial.ttf missing\n");
 		exit(4);
 	}
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+	SDL_RenderClear(renderer);
+	plot_scatter(renderer, X, Y, 256, font);
+	SDL_RenderPresent(renderer);
+	
 	quit = 0;
-
-
 	while(!quit)
 	{
 		while(SDL_PollEvent(&event) == 1)
@@ -61,11 +65,6 @@ int main(void)
 				quit = 1;
 			}
 		}
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-		SDL_RenderClear(renderer);
-
-		plot_scatter(renderer, X, Y, 256, font);
-		SDL_RenderPresent(renderer);
 	}
 
 	TTF_Quit();
