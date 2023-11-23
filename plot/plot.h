@@ -32,7 +32,7 @@ void plot(float *X, float *Y, int n, char *font_path,  void (*plot_type)(SDL_Ren
 	SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
 
 	TTF_Init();
-	TTF_Font *font = TTF_OpenFont(font_path, 24);
+	TTF_Font *font = TTF_OpenFont(font_path, 16);
 	if(!font)
 	{
 		fprintf(stderr, "Font missing\n");

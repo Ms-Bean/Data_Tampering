@@ -14,7 +14,7 @@ int main(void)
 	
 	for(i = 0; i < 256; i++)
 	{
-		X[i] = 10 * (float)rand()/(float)RAND_MAX;
+		X[i] = 1000000 * (float)rand()/(float)RAND_MAX;
 		Y[i] = sin(X[i]) + 2 * (float)rand()/(float)RAND_MAX - 1 + 10;
 	}
 
