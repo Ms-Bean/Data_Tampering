@@ -92,7 +92,7 @@ void video_show_frame(struct Video *video, int frame_index)
 	quit = 0;
 	while(!quit)
 	{
-		SDL_UpdateTexture(texture, NULL, video->frames[3347], video->width_pixels * sizeof(uint8_t)*3);
+		SDL_UpdateTexture(texture, NULL, video->frames[frame_index], video->width_pixels * sizeof(uint8_t)*3);
 		SDL_WaitEvent(&event);
 		switch(event.type)
 		{
@@ -105,6 +105,8 @@ void video_show_frame(struct Video *video, int frame_index)
 		SDL_RenderPresent(renderer);
 	}
 	SDL_DestroyWindow(window);
+	SDL_DestroyTexture(texture);
+	SDL_DestroyRenderer(renderer);
 	SDL_Quit();
 }
 void video_convert_to_grayscale(struct Video *video)

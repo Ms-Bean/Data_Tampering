@@ -177,14 +177,16 @@ float dot_t(float *a, float *b, int n, int num_threads)
 	}
 	for(i = 0; i < num_threads; i++)
 		pthread_join(threads[i], NULL);
-	free(threads);
+
+	pthread_mutex_destroy(mutex);
 	free(mutex);
+	free(threads);
 	free(thread_data);
 	
 	sum_temp = *sum;
 	free(sum);
-	return sum_temp;
 
+	return sum_temp;
 }
 float dot(float *a, float *b, int n)
 {

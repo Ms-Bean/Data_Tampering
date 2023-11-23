@@ -16,9 +16,9 @@ void create_text(SDL_Renderer *renderer, int x, int y, char *text, TTF_Font *fon
 void render_labels(SDL_Renderer *renderer, float x_min, float x_max, float y_min, float y_max, TTF_Font *font);
 void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font);
 
-void plot(float *X, float *Y, int n, char *font_path, void (*plot_type)(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font));
+void plot(float *X, float *Y, int n, char *font_path, int font_size, void (*plot_type)(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font));
 
-void plot(float *X, float *Y, int n, char *font_path,  void (*plot_type)(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font))
+void plot(float *X, float *Y, int n, char *font_path, int font_size, void (*plot_type)(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font))
 {
 	SDL_Event event;
 	SDL_Renderer *renderer;
@@ -32,7 +32,7 @@ void plot(float *X, float *Y, int n, char *font_path,  void (*plot_type)(SDL_Ren
 	SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
 
 	TTF_Init();
-	TTF_Font *font = TTF_OpenFont(font_path, 16);
+	TTF_Font *font = TTF_OpenFont(font_path, font_size);
 	if(!font)
 	{
 		fprintf(stderr, "Font missing\n");
