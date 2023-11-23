@@ -58,11 +58,12 @@ int main(void)
 	quit = 0;
 	while(!quit)
 	{
-		while(SDL_PollEvent(&event) == 1)
+		while(SDL_WaitEvent(&event) == 1)
 		{
 			if(event.type == SDL_QUIT)
 			{
 				quit = 1;
+				break;
 			}
 		}
 	}
