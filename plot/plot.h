@@ -181,12 +181,8 @@ void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font
 		packed_floats[i * 2 + 1] = y_scaled;
 	}
 
-
-	for(i = 0; i < n; i++)
-		printf("%f, %f\n", packed_floats[2*i], packed_floats[2*i + 1]);
 	qsort(packed_floats, n, sizeof(float) * 2, sort_cmp);
-	for(i = 0; i < n; i++)
-		printf("%f, %f\n", packed_floats[2*i], packed_floats[2*i + 1]);
+	
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pixels = (uint32_t *)malloc(WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(uint32_t));
 	if(!pixels)
