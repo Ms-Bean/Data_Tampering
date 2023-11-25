@@ -13,62 +13,16 @@
 #define ORIGIN_X (WINDOW_WIDTH / 10)
 #define ORIGIN_Y (WINDOW_HEIGHT - (WINDOW_HEIGHT / 10))
 
-#define LINE_WIDTH 1
+#define LINE_WIDTH 0
 
 int sort_cmp(const void *a, const void *b);
 
 void create_text(SDL_Renderer *renderer, int x, int y, char *text, TTF_Font *font);
 void render_labels(SDL_Renderer *renderer, float x_min, float x_max, float y_min, float y_max, TTF_Font *font);
 
-void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font);
-void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font);
+void plot_scatter(float *X, float *Y, int n, char *font_path, int font_size, int marker_size);
+void plot_line(float *X, float *Y, int n, char *font_path, int font_size, int line_width);
 
-void plot(float *X, float *Y, int n, char *font_path, int font_size, void (*plot_type)(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font));
-
-void plot(float *X, float *Y, int n, char *font_path, int font_size, void (*plot_type)(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font))
-{
-	SDL_Event event;
-	SDL_Renderer *renderer;
-	SDL_Window *window;
-
-	int quit;
-	int i;
-
-	SDL_Init(SDL_INIT_VIDEO);
-
-	SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
-
-	TTF_Init();
-	TTF_Font *font = TTF_OpenFont(font_path, font_size);
-	if(!font)
-	{
-		fprintf(stderr, "Font missing\n");
-		exit(4);
-	}
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-	SDL_RenderClear(renderer);
-	plot_type(renderer, X, Y, 256, font);
-	SDL_RenderPresent(renderer);
-	
-	quit = 0;
-	while(!quit)
-	{
-		while(SDL_WaitEvent(&event) == 1)
-		{
-			if(event.type == SDL_QUIT)
-			{
-				quit = 1;
-				break;
-			}
-		}
-	}
-
-	TTF_Quit();
-
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
-	SDL_Quit();
-}
 void create_text(SDL_Renderer *renderer, int x, int y, char *text, TTF_Font *font)
 {
 	SDL_Surface *surface;
@@ -93,6 +47,21 @@ void create_text(SDL_Renderer *renderer, int x, int y, char *text, TTF_Font *fon
 void render_labels(SDL_Renderer *renderer, float x_min, float x_max, float y_min, float y_max, TTF_Font *font)
 {
 	int i;
+	SDL_Rect rect;
+	SDL_Texture *texture;
+	float stride_x, stride_y;
+
+	uint32_t *pixels;
+
+	stride_x = ((float)(WINDOW_WIDTH - ORIGIN_X)) / ((float)NUM_TICKS_X);
+	stride_y = ((float)(ORIGIN_Y)) / ((float)(NUM_TICKS_Y));
+
+	pixels = (uint32_t *)calloc(WINDOW_WIDTH * WINDOW_HEIGHT, sizeof(uint32_t));
+	if(!pixels)
+	{
+		fprintf(stderr, "render_labels: calloc error\n");
+		exit(4);
+	}
 
 	for(i = 0; i <= NUM_TICKS_X; i++)
 	{
@@ -109,9 +78,20 @@ void render_labels(SDL_Renderer *renderer, float x_min, float x_max, float y_min
 			exit(4);
 		}
 		snprintf(tick, num_chars + 1, "%f", tick_value);
-		create_text(renderer, ORIGIN_X + 0.8*i * ((float)WINDOW_WIDTH)/((float)NUM_TICKS_X), WINDOW_HEIGHT - 30, tick, font);
+		create_text(renderer, ORIGIN_X + stride_x*i, WINDOW_HEIGHT - 30, tick, font);
 
 		free(tick);
+		
+		rect.x = ((float)ORIGIN_X) + stride_x*i;
+		rect.y = WINDOW_HEIGHT - 35;
+		rect.w = 4;
+		rect.h = 8;
+
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WINDOW_WIDTH, WINDOW_HEIGHT);
+		SDL_UpdateTexture(texture, NULL, pixels, WINDOW_WIDTH * sizeof(uint32_t));
+		SDL_RenderCopy(renderer, texture, NULL, &rect);
+
+		SDL_DestroyTexture(texture);
 	}	
 	for(i = 0; i <= NUM_TICKS_Y; i++)
 	{
@@ -128,9 +108,20 @@ void render_labels(SDL_Renderer *renderer, float x_min, float x_max, float y_min
 			exit(4);
 		}
 		snprintf(tick, num_chars + 1, "%f", tick_value);
-		create_text(renderer, 0, ORIGIN_Y - 0.8*i * (((float)WINDOW_HEIGHT) / ((float)NUM_TICKS_Y)), tick, font);
+		create_text(renderer, 0, ORIGIN_Y - stride_y*i, tick, font);
 
 		free(tick);
+
+		rect.x = ORIGIN_X-5;
+		rect.y = ORIGIN_Y - stride_y*i;
+		rect.w = 8;
+		rect.h = 4;
+
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WINDOW_WIDTH, WINDOW_HEIGHT);
+		SDL_UpdateTexture(texture, NULL, pixels, WINDOW_WIDTH * sizeof(uint32_t));
+		SDL_RenderCopy(renderer, texture, NULL, &rect);
+
+		SDL_DestroyTexture(texture);
 	}
 }
 
@@ -140,17 +131,38 @@ int sort_cmp(const void *a, const void *b)
 		return 1;
 	return -1;
 }
-void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font)
+void plot_line(float *X, float *Y, int n, char *font_path, int font_size, int line_width)
 {
+	SDL_Event event;
+	SDL_Renderer *renderer;
+	SDL_Window *window;
 	SDL_Texture *texture;
+	TTF_Font *font;
 
+	int quit;
 	uint32_t *pixels;
 	
 	int i, j;
 
 	float x_min, x_max;
 	float y_min, y_max;
+	float *packed_floats;
 
+	SDL_Init(SDL_INIT_VIDEO);
+
+	SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
+
+	TTF_Init();
+	font = TTF_OpenFont(font_path, font_size);
+	if(!font)
+	{
+		fprintf(stderr, "Font missing\n");
+		exit(4);
+	}
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+	SDL_RenderClear(renderer);
+	
+	y_min = y_max = x_min = x_max = 0;
 	for(i = 0; i < n; i++)
 	{
 		if(i == 0 || X[i] > x_max)
@@ -162,18 +174,29 @@ void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font
 		if(i == 0 || Y[i] < y_min)
 			y_min = Y[i];
 	}
+	if(y_min == y_max)
+	{
+		y_min -= 0.5;
+		y_max += 0.5;
+	}
+	if(x_min == x_max)
+	{
+		x_min -= 0.5;
+		x_max += 0.5;
+	}
 	
 	/* [x1 y1] [x2 y2] [x3 y3] ... */
-	float *packed_floats = (float *)malloc(sizeof(float) * 2 * n);
+	packed_floats = (float *)malloc(sizeof(float) * 2 * n);
 	if(!packed_floats)
 	{
 		fprintf(stderr, "plot_line: malloc error\n");
 		exit(4);
 	}
+
 	for(i = 0; i < n; i++)
 	{
 		float x_scaled, y_scaled;
-
+		
 		x_scaled = ORIGIN_X + (X[i] - x_min)/(x_max - x_min) * (WINDOW_WIDTH - ORIGIN_X);
 		y_scaled = ORIGIN_Y - (Y[i] - y_min)/(y_max - y_min) * ORIGIN_Y;
 
@@ -183,7 +206,6 @@ void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font
 
 	qsort(packed_floats, n, sizeof(float) * 2, sort_cmp);
 	
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pixels = (uint32_t *)malloc(WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(uint32_t));
 	if(!pixels)
 	{
@@ -191,6 +213,7 @@ void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font
 		exit(4);
 	}
 	memset(pixels, 255, WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(uint32_t));
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WINDOW_WIDTH, WINDOW_HEIGHT);
 	
 	for(i = 0; i < n - 1; i++)
 	{
@@ -230,7 +253,7 @@ void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font
 			curr_y += dy;
 		}
 	}	
-	for(i = 0; i < LINE_WIDTH; i++)
+	for(i = 0; i < line_width - 1; i++)
 	{
 		uint32_t *pixels_new;
 		int x, y;
@@ -263,15 +286,37 @@ void plot_line(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font
 		pixels = pixels_new;
 	}
 
-
 	SDL_UpdateTexture(texture, NULL, pixels, WINDOW_WIDTH * sizeof(uint32_t));
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_DestroyTexture(texture);
+
 	render_labels(renderer, x_min, x_max, y_min, y_max, font);
+	
 	free(pixels);
 	free(packed_floats);
+	
+	SDL_RenderPresent(renderer);
+	
+	quit = 0;
+	while(!quit)
+	{
+		while(SDL_WaitEvent(&event) == 1)
+		{
+			if(event.type == SDL_QUIT)
+			{
+				quit = 1;
+				break;
+			}
+		}
+	}
+
+	TTF_Quit();
+
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 }
-void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *font)
+void plot_scatter(float *X, float *Y, int n, char *font_path, int font_size, int marker_size)
 {
 	uint32_t *pixels;
 
@@ -280,7 +325,26 @@ void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *f
 
 	int i;
 
+	SDL_Event event;
+	SDL_Renderer *renderer;
+	SDL_Window *window;
+	TTF_Font *font;
 
+	int quit;
+
+	SDL_Init(SDL_INIT_VIDEO);
+
+	SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
+
+	TTF_Init();
+	font = TTF_OpenFont(font_path, font_size);
+	if(!font)
+	{
+		fprintf(stderr, "Font missing\n");
+		exit(4);
+	}
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+	SDL_RenderClear(renderer);
 	pixels = (uint32_t *)malloc(WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(uint32_t));
 	if(!pixels)
 	{
@@ -289,6 +353,7 @@ void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *f
 	}
 	memset(pixels, 0, WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(uint32_t));
 
+	y_min = y_max = x_min = x_max = 0;
 	for(i = 0; i < n; i++)
 	{
 		if(i == 0 || X[i] > x_max)
@@ -299,6 +364,16 @@ void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *f
 			y_max = Y[i];
 		if(i == 0 || Y[i] < y_min)
 			y_min = Y[i];
+	}
+	if(y_min == y_max)
+	{
+		y_min -= 0.5;
+		y_max += 0.5;
+	}
+	if(x_min == x_max)
+	{
+		x_min -= 0.5;
+		x_max += 0.5;
 	}
 
 	render_labels(renderer, x_min, x_max, y_min, y_max, font);
@@ -315,8 +390,8 @@ void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *f
 
 		rect.x = x_scaled;
 		rect.y = y_scaled;
-		rect.w = 10;
-		rect.h = 10;
+		rect.w = marker_size;
+		rect.h = marker_size;
 
 		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WINDOW_WIDTH, WINDOW_HEIGHT);
 		SDL_UpdateTexture(texture, NULL, pixels, WINDOW_WIDTH * sizeof(uint32_t));
@@ -326,4 +401,25 @@ void plot_scatter(SDL_Renderer *renderer, float *X, float *Y, int n, TTF_Font *f
 	}
 
 	free(pixels);
+	
+	SDL_RenderPresent(renderer);
+	
+	quit = 0;
+	while(!quit)
+	{
+		while(SDL_WaitEvent(&event) == 1)
+		{
+			if(event.type == SDL_QUIT)
+			{
+				quit = 1;
+				break;
+			}
+		}
+	}
+
+	TTF_Quit();
+
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 }

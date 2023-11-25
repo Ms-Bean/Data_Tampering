@@ -20,6 +20,10 @@ int main(void)
 		Y[i] = sin(X[i]) + 2 * (float)rand()/(float)RAND_MAX - 1 + 10;
 	}
 
-	plot(X, Y, 256, "plot/Arial.ttf", 18, plot_line);
+	printf("%f, %f\n", X[0], Y[0]);
+	printf("%f, %f\n", X[1], Y[1]);
+	
+	plot_line(X, Y, 2, "plot/Arial.ttf", 24, 2);
+
 	return 0;
 }
